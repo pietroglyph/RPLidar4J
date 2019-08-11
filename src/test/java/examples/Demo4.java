@@ -4,18 +4,17 @@ import ev3dev.sensors.slamtec.RPLidarA1;
 import ev3dev.sensors.slamtec.RPLidarA1ServiceException;
 import ev3dev.sensors.slamtec.RPLidarProviderListener;
 import ev3dev.sensors.slamtec.model.Scan;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public @Slf4j class Demo4 {
+public class Demo4 {
 
     private static AtomicInteger counter;
     private static volatile int samplesPerSecond;
 
     public static void main(String[] args) throws Exception {
 
-        log.info("Testing RPLidar on a EV3Dev with Java");
+        System.out.println("Testing RPLidar on a EV3Dev with Java");
 
         final String USBPort = "/dev/ttyUSB0";
         final RPLidarA1 lidar = new RPLidarA1(USBPort);
@@ -36,7 +35,7 @@ public @Slf4j class Demo4 {
             @Override
             public void scanFinished(final Scan scan) {
                 final int counter = scan.getDistances().size();
-                //log.info("Measures: {}", counter);
+                // log.info("Measures: {}", counter);
 
                 synchronized (this) {
                     samplesPerSecond += counter;
@@ -47,25 +46,25 @@ public @Slf4j class Demo4 {
         int counter = 0;
 
         boolean flag = true;
-        while(flag){
+        while (flag) {
 
             lidar.scan();
 
             counter++;
-            log.info("Counter: {}, Samples: ;{}", counter, samplesPerSecond);
+            System.out.println("Counter: " + counter + ", Samples: " + samplesPerSecond);
             samplesPerSecond = 0;
 
-            if(counter > 500){
+            if (counter > 500) {
                 break;
-                //log.info("RESET");
-                //lidar.close();
-                //lidar.init();
-                //counter=0;
+                // log.info("RESET");
+                // lidar.close();
+                // lidar.init();
+                // counter=0;
             }
         }
 
         lidar.close();
-        log.info("End");
+        System.out.println("End");
         System.exit(0);
     }
 

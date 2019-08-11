@@ -10,4 +10,3 @@ public interface RPLidarProviderListener {
     void scanFinished(Scan scan);
 
 }
-

@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - Demo2",
+            "request": "launch",
+            "mainClass": "examples.Demo2",
+            "projectName": "RPLidar4J"
+        },
+        {
+            "type": "java",
+            "name": "CodeLens (Launch) - Demo3",
+            "request": "launch",
+            "mainClass": "examples.Demo3",
+            "projectName": "RPLidar4J"
+        }
+    ]
+}

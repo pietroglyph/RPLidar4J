@@ -1,7 +1,7 @@
 package ev3dev.sensors.slamtec;
 
 import ev3dev.sensors.slamtec.model.Scan;
-import lombok.extern.slf4j.Slf4j;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -10,7 +10,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 
-public @Slf4j class RPLidarA1FakeTests {
+public class RPLidarA1FakeTests {
 
 	@BeforeClass
 	public static void runOnceBeforeClass() {
@@ -23,9 +23,7 @@ public @Slf4j class RPLidarA1FakeTests {
 		final String USBPort = "ttyUSB0";
 		final RPLidarA1 lidar = new RPLidarA1(USBPort);
 		lidar.init();
-		lidar.scan().getDistances()
-			.stream()
-			.forEach(System.out::println);
+		lidar.scan().getDistances().stream().forEach(System.out::println);
 		lidar.close();
 	}
 

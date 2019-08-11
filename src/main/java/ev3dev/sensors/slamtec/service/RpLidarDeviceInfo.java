@@ -1,14 +1,12 @@
 package ev3dev.sensors.slamtec.service;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Contains information about the device
  *
  * @author Peter Abeles
  * @author Juan Antonio Breña Moral
  */
-public @Slf4j class RpLidarDeviceInfo {
+public class RpLidarDeviceInfo {
 
 	public int model;
 	public int firmware_minor;
@@ -18,11 +16,11 @@ public @Slf4j class RpLidarDeviceInfo {
 
 	public void print() {
 
-		log.info("DEVICE INFO");
-		log.info("  model = " + model);
-		log.info("  firmware_minor = " + firmware_minor);
-		log.info("  firmware_major = " + firmware_major);
-		log.info("  hardware = " + hardware);
+		System.out.println("DEVICE INFO");
+		System.out.println("  model = " + model);
+		System.out.println("  firmware_minor = " + firmware_minor);
+		System.out.println("  firmware_major = " + firmware_major);
+		System.out.println("  hardware = " + hardware);
 
 		final StringBuilder sb = new StringBuilder();
 		sb.append("  Serial = ");
@@ -31,6 +29,6 @@ public @Slf4j class RpLidarDeviceInfo {
 			if ((i + 1) % 4 == 0)
 				sb.append(" ");
 		}
-		log.info(sb.toString());
+		System.out.println(sb.toString());
 	}
 }

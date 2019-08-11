@@ -10,9 +10,7 @@ repositories {
 }
 
 dependencies {
-   compile("org.slf4j:slf4j-api:1.7.25")
-   compile("org.rxtx:rxtx:2.1.7")
-   compile("org.projectlombok:lombok:1.16.18")
+   compile("com.github.purejavacomm:purejavacomm:1.0.1.RELEASE")
 
    testCompile("ch.qos.logback:logback-classic:1.2.3")
    testCompile("junit:junit:4.12")
@@ -22,42 +20,6 @@ dependencies {
 
 //Compile
 compileJava {
-   sourceCompatibility = 1.8
-   targetCompatibility = 1.8
+   sourceCompatibility = 11
+   targetCompatibility = 11
 }
-
-//Jar
-jar {
-   baseName = "${rootProject.name}"
-   manifest {
-      from file("${projectDir}/src/main/resources/META-INF/MANIFEST.MF")
-   }
-}
-
-//Fat Jar
-task fatJar(type: Jar) {
-   baseName = "${rootProject.name}" + "-all"
-   manifest {
-      from file("${projectDir}/src/main/resources/META-INF/MANIFEST.MF")
-   }
-   from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-   with jar
-}
-
-//Deploy on Brick
-buildscript {
-   repositories {
-      maven {
-         url "https://plugins.gradle.org/m2/"
-      }
-   }
-   dependencies {
-      classpath "org.hidetake:gradle-ssh-plugin:2.0.0"
-   }
-}
-apply plugin: 'org.hidetake.ssh'
-
-apply from: 'deploy.gradle'
-
-
-

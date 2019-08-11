@@ -2,7 +2,6 @@ package ev3dev.sensors.slamtec;
 
 import ev3dev.sensors.slamtec.model.Scan;
 import ev3dev.sensors.slamtec.model.ScanDistance;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,11 +10,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@Slf4j class RPLidarA1Fake implements RPLidarProvider {
+class RPLidarA1Fake implements RPLidarProvider {
 
-    public RPLidarA1Fake(final String USBPort){
+    public RPLidarA1Fake(final String USBPort) {
         readThread = new ReadSerialThread();
-        log.trace("Starting a Fake RPLidarA1 Object");
     }
 
     private ReadSerialThread readThread;
@@ -28,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
     @Override
     public Scan scan() throws RPLidarA1ServiceException {
         final List<ScanDistance> distances = Collections.synchronizedList(new ArrayList<>());
-        for(int angle = 0; angle < 360; angle++){
+        for (int angle = 0; angle < 360; angle++) {
             distances.add(new ScanDistance(angle, new Float(Math.random() * 4000 + 1), 1, false));
         }
         return new Scan(distances);
@@ -46,19 +44,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
         private final List<RPLidarProviderListener> listenerList = Collections.synchronizedList(new ArrayList());
 
-        ReadSerialThread(){
+        ReadSerialThread() {
             run = new AtomicBoolean(true);
             counter = new AtomicInteger(0);
         }
 
         public void addListener(final RPLidarProviderListener listener) {
-            synchronized (listenerList){
+            synchronized (listenerList) {
                 listenerList.add(listener);
             }
         }
 
-        public void removeListener(final RPLidarProviderListener listener){
-            synchronized (listenerList){
+        public void removeListener(final RPLidarProviderListener listener) {
+            synchronized (listenerList) {
                 listenerList.remove(listener);
             }
         }
@@ -70,26 +68,28 @@ import java.util.concurrent.atomic.AtomicInteger;
         @Override
         public void run() {
 
-            while(run.get()){
+            while (run.get()) {
                 counter.incrementAndGet();
-                if(counter.get() > 50){
+                if (counter.get() > 50) {
 
                     synchronized (listenerList) {
                         for (RPLidarProviderListener listener : listenerList) {
                             try {
                                 listener.scanFinished(scan());
                             } catch (RPLidarA1ServiceException e) {
-                                log.error(e.getLocalizedMessage());
+                                System.out.println(e.getLocalizedMessage());
                                 e.printStackTrace();
                             }
                         }
                     }
 
                     counter.getAndSet(0);
-                    log.info("Detected start flag");
                 }
 
-                try { TimeUnit.MILLISECONDS.sleep(5); } catch (InterruptedException e) {}
+                try {
+                    TimeUnit.MILLISECONDS.sleep(5);
+                } catch (InterruptedException e) {
+                }
             }
 
         }

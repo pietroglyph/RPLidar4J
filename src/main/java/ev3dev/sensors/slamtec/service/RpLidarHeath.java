@@ -1,33 +1,31 @@
 package ev3dev.sensors.slamtec.service;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * Packet which describes the sensor's health
  *
  * @author Peter Abeles
  * @author Juan Antonio Breña Moral
  */
-public @Slf4j class RpLidarHeath {
+public class RpLidarHeath {
 
 	public int status;
 	public int error_code;
 
 	public void print() {
-		log.info("HEALTH:");
+		System.out.println("HEALTH:");
 		switch (status) {
-			case 0:
-				log.info("  Good");
-				break;
-			case 1:
-				log.info("  Warning");
-				break;
-			case 2:
-				log.info("  Error");
-				break;
-			default:
-				log.info("  unknown = " + status);
+		case 0:
+			System.out.println("  Good");
+			break;
+		case 1:
+			System.out.println("  Warning");
+			break;
+		case 2:
+			System.out.println("  Error");
+			break;
+		default:
+			System.out.println("  unknown = " + status);
 		}
-		log.info("  error_code = " + error_code);
+		System.out.println("  error_code = " + error_code);
 	}
 }
