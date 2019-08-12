@@ -14,7 +14,7 @@ public class RPLidarA1Tests {
 
 	@Test
 	public void getDistanceStreamTest() throws Exception {
-		final RPLidarA1 lidar = new RPLidarA1(kUSBPort, (RPLidarMeasurement m) -> {
+		final RPLidarDevice lidar = new RPLidarA1(kUSBPort, (RPLidarMeasurement m) -> {
 			if (m != null && !m.isInvalid()) {
 				synchronized (gotMeasurementUpdate) {
 					gotMeasurementUpdate.notify();
@@ -34,7 +34,7 @@ public class RPLidarA1Tests {
 
 	@Test
 	public void return360DistanceTest() throws Exception {
-		final RPLidarA1 lidar = new RPLidarA1(kUSBPort, (List<RPLidarMeasurement> pointcloud) -> {
+		final RPLidarDevice lidar = new RPLidarA1(kUSBPort, (List<RPLidarMeasurement> pointcloud) -> {
 			assertTrue("Pointcloud is empty", pointcloud.size() > 0);
 			synchronized (gotPointcloud) {
 				gotPointcloud.notify();

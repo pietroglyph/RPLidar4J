@@ -9,8 +9,8 @@ package  ev3dev.sensors.slamtec;
 public class RPLidarDeviceInfo {
 
 	public int model;
-	public int firmware_minor;
-	public int firmware_major;
+	public int firmwareMinor;
+	public int firmwareMajor;
 	public int hardware;
 	public byte[] serialNumber = new byte[16];
 
@@ -18,8 +18,8 @@ public class RPLidarDeviceInfo {
 
 		System.out.println("DEVICE INFO");
 		System.out.println("  model = " + model);
-		System.out.println("  firmware_minor = " + firmware_minor);
-		System.out.println("  firmware_major = " + firmware_major);
+		System.out.println("  firmware_minor = " + firmwareMinor);
+		System.out.println("  firmware_major = " + firmwareMajor);
 		System.out.println("  hardware = " + hardware);
 
 		final StringBuilder sb = new StringBuilder();

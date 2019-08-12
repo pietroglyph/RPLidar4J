@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 
 /**
  * Low level service for RPLidar. Just sends and receives packets. Doesn't
@@ -35,23 +34,23 @@ public class RPLidarLowLevelDriver {
 	private static final byte RCV_HEALTH = (byte) 0x06;
 	private static final byte RCV_SCAN = (byte) 0x81;
 
-	SerialPort serialPort;
-	InputStream in;
-	OutputStream out;
+	SerialPort mSerialPort;
+	InputStream mInStream;
+	OutputStream mOutStream;
 
 	// buffer for out going data
-	byte[] dataOut = new byte[1024];
+	byte[] mDataOutBuf = new byte[1024];
 
 	// flag to turn on and off verbose debugging output
-	boolean verbose = false;
+	boolean mVerbose = false;
 
 	// thread for reading serial data
-	private ReadSerialThread readThread;
+	private ReadSerialThread mReadThread;
 
 	// Storage for incoming packets
-	RPLidarHealth health = new RPLidarHealth();
-	RPLidarDeviceInfo deviceInfo = new RPLidarDeviceInfo();
-	RPLidarListener listener;
+	RPLidarHealth mLatestHealth = new RPLidarHealth();
+	RPLidarDeviceInfo mLatestDeviceInfo = new RPLidarDeviceInfo();
+	RPLidarListener mListener;
 
 	// if it is in scanning mode. When in scanning mode it just parses measurement
 	// packets
@@ -71,21 +70,20 @@ public class RPLidarLowLevelDriver {
 
 		System.out.println("Opening port " + portName);
 
-		this.listener = listener;
+		this.mListener = listener;
 
 		// Configuration for Serial port operations
 		final CommPortIdentifier portIdentifier = CommPortIdentifier.getPortIdentifier(portName);
 		final CommPort commPort = portIdentifier.open("RPLidar4J", 2000);
-		serialPort = (SerialPort) commPort;
-		serialPort.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
-		serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
-		serialPort.setDTR(false); // lovely undocumented feature where if true the motor stops spinning
+		mSerialPort = (SerialPort) commPort;
+		mSerialPort.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+		mSerialPort.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
 
-		in = serialPort.getInputStream();
-		out = serialPort.getOutputStream();
+		mInStream = mSerialPort.getInputStream();
+		mOutStream = mSerialPort.getOutputStream();
 
-		readThread = new ReadSerialThread();
-		new Thread(readThread).start();
+		mReadThread = new ReadSerialThread();
+		new Thread(mReadThread).start();
 	}
 
 	/**
@@ -106,12 +104,12 @@ public class RPLidarLowLevelDriver {
 	 */
 	public void shutdown() {
 
-		serialPort.close();
+		mSerialPort.close();
 
 		// TODO Check by the status of the Thread
-		if (readThread != null) {
-			readThread.requestStop();
-			readThread = null;
+		if (mReadThread != null) {
+			mReadThread.requestStop();
+			mReadThread = null;
 		}
 	}
 
@@ -144,14 +142,6 @@ public class RPLidarLowLevelDriver {
 				(byte) 0x22 };
 
 		return sendBlocking(EXPRESS_SCAN, expressPayload, (byte) 0x82, timeout);
-	}
-
-	/**
-	 * Sends a STOP packet
-	 */
-	public void sendStop() {
-		scanning = false;
-		sendNoPayLoad(STOP);
 	}
 
 	/**
@@ -212,16 +202,16 @@ public class RPLidarLowLevelDriver {
 	 * Sends a command with no data payload
 	 */
 	protected void sendNoPayLoad(byte command) {
-		if (verbose) {
+		if (mVerbose) {
 			System.out.printf("Sending command 0x%02x\n", command & 0xFF);
 		}
 
-		dataOut[0] = SYNC_BYTE0;
-		dataOut[1] = command;
+		mDataOutBuf[0] = SYNC_BYTE0;
+		mDataOutBuf[1] = command;
 
 		try {
-			out.write(dataOut, 0, 2);
-			out.flush();
+			mOutStream.write(mDataOutBuf, 0, 2);
+			mOutStream.flush();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -231,33 +221,36 @@ public class RPLidarLowLevelDriver {
 	 * Sends a command with data payload
 	 */
 	protected void sendPayLoad(byte command, byte[] payLoad) {
-		if (verbose) {
+		if (mVerbose) {
 			System.out.printf("Sending command 0x%02x\n", command);
 		}
 
-		dataOut[0] = SYNC_BYTE0;
-		dataOut[1] = command;
+		mDataOutBuf[0] = SYNC_BYTE0;
+		mDataOutBuf[1] = command;
+		mDataOutBuf[2] = (byte) (payLoad.length & 0xFF);
 
-		// calculate checksum
-		int checksum = dataOut[0] ^ dataOut[1];
+		// Calculate checksum
+		// Docs say it should be
+		// 0 ⨁ 0xA5 ⨁ CmdType ⨁ PayloadSize ⨁ Payload[0] ⨁ ... ⨁ Payload[n]
+		int checksum = 0 ^ mDataOutBuf[0] ^ mDataOutBuf[1] ^ mDataOutBuf[2];
 
 		for (int i = 0; i < payLoad.length; i++) {
-			dataOut[2 + i] = payLoad[i];
-			checksum ^= dataOut[2 + i];
+			mDataOutBuf[3 + i] = payLoad[i];
+			checksum ^= mDataOutBuf[3 + i];
 		}
 
-		// add checksum - now total length is 2 + payLoad.length + 1
-		dataOut[2 + payLoad.length] = (byte) checksum;
+		// add checksum - now total length is 3 + payLoad.length + 1
+		mDataOutBuf[3 + payLoad.length] = (byte) checksum;
 
 		// System.out.print("dataOut = [");
 		// for (byte b : dataOut) {
 		// System.out.printf("0x%02x ", b);
 		// }
-		// System.out.println("] (We will send " + (2 + payLoad.length + 1) + ")");
+		// System.out.println("] (We will send " + (3 + payLoad.length + 1) + ")");
 
 		try {
-			out.write(dataOut, 0, 2 + payLoad.length + 1);
-			out.flush();
+			mOutStream.write(mDataOutBuf, 0, 3 + payLoad.length + 1);
+			mOutStream.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -277,16 +270,24 @@ public class RPLidarLowLevelDriver {
 	 * Sends a start motor command
 	 */
 	public void sendStartMotor(int speed) {
-		byte[] number = toLittleEndian(speed);
-
-		sendPayLoad(START_MOTOR, new byte[] { (byte) 0x02, number[0], number[1] });
+		mSerialPort.setDTR(false);
+		sendPayLoad(START_MOTOR, toLittleEndian(speed));
 	}
 
 	/**
-	 * Sends a stop motor command
+	 * Sends a stop and stop motor command.
+	 * 
+	 * @param isA2 Is this an A2 device. If true we will send a motor speed command
+	 *             instead of a STOP command.
 	 */
-	public void sendStopMotor() {
-		sendStartMotor(0);
+	public void sendStop(boolean isA2) {
+		scanning = false;
+		if (isA2) {
+			sendStartMotor(0);
+		} else {
+			sendNoPayLoad(STOP);
+			mSerialPort.setDTR(true); // This is actually what makes things stop
+		}
 	}
 
 	/**
@@ -306,7 +307,7 @@ public class RPLidarLowLevelDriver {
 				if (parseScan(data, offset, 5)) {
 					offset += 5;
 				} else {
-					if (verbose)
+					if (mVerbose)
 						System.out.println("--- Bad Packet ---");
 					offset += 1;
 				}
@@ -327,12 +328,12 @@ public class RPLidarLowLevelDriver {
 					// int sendMode = (info >> 30) & 0xFF;
 					byte dataType = data[offset + 6];
 
-					if (verbose) {
+					if (mVerbose) {
 						System.out.printf("packet 0x%02x length = %d\n", dataType, packetLength);
 					}
 					// see if it has received the entire packet
 					if (offset + 2 + 5 + packetLength > length) {
-						if (verbose) {
+						if (mVerbose) {
 							System.out.println("  waiting for rest of the packet");
 						}
 						return offset;
@@ -377,10 +378,10 @@ public class RPLidarLowLevelDriver {
 			return false;
 		}
 
-		health.status = data[offset] & 0xFF;
-		health.error_code = (data[offset + 1] & 0xFF) | ((data[offset + 2] & 0xFF) << 8);
+		mLatestHealth.status = data[offset] & 0xFF;
+		mLatestHealth.errorCode = (data[offset + 1] & 0xFF) | ((data[offset + 2] & 0xFF) << 8);
 
-		listener.handleDeviceHealth(health);
+		mListener.handleDeviceHealth(mLatestHealth);
 		return true;
 	}
 
@@ -390,16 +391,16 @@ public class RPLidarLowLevelDriver {
 			return false;
 		}
 
-		deviceInfo.model = data[offset] & 0xFF;
-		deviceInfo.firmware_minor = data[offset + 1] & 0xFF;
-		deviceInfo.firmware_major = data[offset + 2] & 0xFF;
-		deviceInfo.hardware = data[offset + 3] & 0xFF;
+		mLatestDeviceInfo.model = data[offset] & 0xFF;
+		mLatestDeviceInfo.firmwareMinor = data[offset + 1] & 0xFF;
+		mLatestDeviceInfo.firmwareMajor = data[offset + 2] & 0xFF;
+		mLatestDeviceInfo.hardware = data[offset + 3] & 0xFF;
 
 		for (int i = 0; i < 16; i++) {
-			deviceInfo.serialNumber[i] = data[offset + 4 + i];
+			mLatestDeviceInfo.serialNumber[i] = data[offset + 4 + i];
 		}
 
-		listener.handleDeviceInfo(deviceInfo);
+		mListener.handleDeviceInfo(mLatestDeviceInfo);
 		return true;
 	}
 
@@ -430,12 +431,12 @@ public class RPLidarLowLevelDriver {
 		measurement.angle = angle / 64f;
 		measurement.distance = distance / 40f;
 
-		listener.handleMeasurement(measurement);
+		mListener.handleMeasurement(measurement);
 		return true;
 	}
 
 	public void setVerbose(boolean verbose) {
-		this.verbose = verbose;
+		this.mVerbose = verbose;
 	}
 
 	/**
@@ -460,8 +461,8 @@ public class RPLidarLowLevelDriver {
 		public void run() {
 			while (run.get()) {
 				try {
-					if (in.available() > 0) {
-						int totalRead = in.read(data, size, data.length - size);
+					if (mInStream.available() > 0) {
+						int totalRead = mInStream.read(data, size, data.length - size);
 
 						size += totalRead;
 

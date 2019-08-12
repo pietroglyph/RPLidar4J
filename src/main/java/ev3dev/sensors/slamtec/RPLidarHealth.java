@@ -9,7 +9,7 @@ package  ev3dev.sensors.slamtec;
 public class RPLidarHealth {
 
 	public int status;
-	public int error_code;
+	public int errorCode;
 
 	public void print() {
 		System.out.println("HEALTH:");
@@ -26,6 +26,6 @@ public class RPLidarHealth {
 		default:
 			System.out.println("  unknown = " + status);
 		}
-		System.out.println("  error_code = " + error_code);
+		System.out.println("  error_code = " + errorCode);
 	}
 }
