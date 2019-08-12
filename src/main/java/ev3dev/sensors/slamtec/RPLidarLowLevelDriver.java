@@ -196,9 +196,7 @@ public class RPLidarLowLevelDriver {
 			out.write(dataOut, 0, 2);
 			out.flush();
 		} catch (IOException e) {
-			System.out.println(e.getLocalizedMessage());
-			// TODO Think in a Low Level exception
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -279,7 +277,7 @@ public class RPLidarLowLevelDriver {
 		while (true) {
 			if (scanning) {
 				if (offset + 5 > length) {
-					return length;
+					return offset;
 				}
 
 				if (parseScan(data, offset, 5)) {
@@ -292,7 +290,7 @@ public class RPLidarLowLevelDriver {
 			} else {
 				// see if it has consumed all the data
 				if (offset + 1 + 4 + 1 > length) {
-					return length;
+					return offset;
 				}
 
 				byte start0 = data[offset];
@@ -452,7 +450,7 @@ public class RPLidarLowLevelDriver {
 						size -= used;
 					}
 
-					Thread.sleep(5);
+					Thread.sleep(1);
 				} catch (Exception e) {
 					System.out.println(e.getLocalizedMessage());
 					e.printStackTrace();
