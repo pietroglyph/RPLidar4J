@@ -303,7 +303,7 @@ public class RPLidarLowLevelDriver {
 							| ((data[offset + 4] & 0xFF) << 16) | ((data[offset + 5] & 0xFF) << 24);
 
 					int packetLength = info & 0x3FFFFFFF;
-					int sendMode = (info >> 30) & 0xFF;
+					// int sendMode = (info >> 30) & 0xFF;
 					byte dataType = data[offset + 6];
 
 					if (verbose) {
@@ -390,8 +390,8 @@ public class RPLidarLowLevelDriver {
 		byte b0 = data[offset];
 		byte b1 = data[offset + 1];
 
-		boolean start0 = (b0 & 0x01) != 0;
-		boolean start1 = (b0 & 0x02) != 0;
+		boolean start0 = (b0 & 0x01) == 1;
+		boolean start1 = (b0 & 0x02) >> 1 == 1;
 
 		if (start0 == start1)
 			return false;
