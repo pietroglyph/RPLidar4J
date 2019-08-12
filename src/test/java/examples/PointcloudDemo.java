@@ -8,16 +8,13 @@ import ev3dev.sensors.slamtec.RPLidarMeasurement;
 public class PointcloudDemo {
 
     public static void main(String[] args) {
-
-        System.out.println("Testing RPLidarNew");
-        final String USBPort = "/dev/ttyUSB0";
-        final RPLidarA1 lidar = new RPLidarA1(USBPort, (List<RPLidarMeasurement> pointcloud) -> {
+        final String usbPort = "/dev/ttyUSB0";
+        final RPLidarA1 lidar = new RPLidarA1(usbPort, (List<RPLidarMeasurement> pointcloud) -> {
             System.out.println("Got pointcloud of size " + pointcloud.size());
         });
         lidar.start();
 
         try {
-            // Thread.sleep(5000);
             while (true) {
                 Thread.sleep(1);
             }
