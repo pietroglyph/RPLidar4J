@@ -38,14 +38,15 @@ public class RPLidarA1Tests {
 			assertTrue("Pointcloud is empty", pointcloud.size() > 0);
 			synchronized (gotPointcloud) {
 				gotPointcloud.notify();
+				gotPointcloud = true;
 			}
 		});
 		lidar.start();
 
 		synchronized (gotPointcloud) {
 			gotPointcloud.wait(1000);
+			assertTrue(gotPointcloud);
 		}
-		// assertTrue(gotPointcloud);
 
 		lidar.stop();
 	}

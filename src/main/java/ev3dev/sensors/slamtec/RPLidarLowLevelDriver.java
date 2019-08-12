@@ -1,4 +1,4 @@
-package  ev3dev.sensors.slamtec;
+package ev3dev.sensors.slamtec;
 
 import purejavacomm.CommPort;
 import purejavacomm.CommPortIdentifier;
@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 /**
  * Low level service for RPLidar. Just sends and receives packets. Doesn't
@@ -18,20 +19,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RPLidarLowLevelDriver {
 
 	// out going packet types
-	public static final byte SYNC_BYTE0 = (byte) 0xA5;
-	public static final byte SYNC_BYTE1 = (byte) 0x5A;
-	public static final byte STOP = (byte) 0x25;
-	public static final byte RESET = (byte) 0x40;
-	public static final byte SCAN = (byte) 0x20;
-	public static final byte FORCE_SCAN = (byte) 0x21;
-	public static final byte GET_INFO = (byte) 0x50;
-	public static final byte GET_HEALTH = (byte) 0x52;
+	private static final byte SYNC_BYTE0 = (byte) 0xA5;
+	private static final byte SYNC_BYTE1 = (byte) 0x5A;
+	private static final byte STOP = (byte) 0x25;
+	private static final byte RESET = (byte) 0x40;
+	private static final byte SCAN = (byte) 0x20;
+	private static final byte EXPRESS_SCAN = (byte) 0x82;
+	private static final byte FORCE_SCAN = (byte) 0x21;
+	private static final byte GET_INFO = (byte) 0x50;
+	private static final byte GET_HEALTH = (byte) 0x52;
+	private static final byte START_MOTOR = (byte) 0xF0;
 
 	// in coming packet types
-	public static final byte RCV_INFO = (byte) 0x04;
-	public static final byte RCV_HEALTH = (byte) 0x06;
-	public static final byte RCV_SCAN = (byte) 0x81;
-	private static final byte START_MOTOR = (byte) 0xF0;
+	private static final byte RCV_INFO = (byte) 0x04;
+	private static final byte RCV_HEALTH = (byte) 0x06;
+	private static final byte RCV_SCAN = (byte) 0x81;
 
 	SerialPort serialPort;
 	InputStream in;
@@ -49,7 +51,6 @@ public class RPLidarLowLevelDriver {
 	// Storage for incoming packets
 	RPLidarHealth health = new RPLidarHealth();
 	RPLidarDeviceInfo deviceInfo = new RPLidarDeviceInfo();
-	RPLidarMeasurement measurement = new RPLidarMeasurement();
 	RPLidarListener listener;
 
 	// if it is in scanning mode. When in scanning mode it just parses measurement
@@ -126,6 +127,26 @@ public class RPLidarLowLevelDriver {
 	}
 
 	/**
+	 * Request that the LIDAR enters the fastest possible scan mode.
+	 * 
+	 * I'm keeping this here for completeness, but it's unused because it doesn't
+	 * yield a higher sampling rate for the A1 devices. If you want to use the
+	 * higher sampling rate because you have an A2 device you will need to call this
+	 * method instead of sendScan, and you will also need to implement parsing of
+	 * express scan response packets, which are different than the packets for a
+	 * regular scan.
+	 * 
+	 * @param timeout Blocking time. Resends packet periodically if >= 0.
+	 * @return true if successful
+	 */
+	public boolean sendExpressScan(final long timeout) {
+		var expressPayload = new byte[] { (byte) 0x05, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+				(byte) 0x22 };
+
+		return sendBlocking(EXPRESS_SCAN, expressPayload, (byte) 0x82, timeout);
+	}
+
+	/**
 	 * Sends a STOP packet
 	 */
 	public void sendStop() {
@@ -167,14 +188,20 @@ public class RPLidarLowLevelDriver {
 	 * Low level blocking packet send routine
 	 */
 	protected boolean sendBlocking(byte command, byte expected, long timeout) {
+		return sendBlocking(command, null, expected, timeout);
+	}
+
+	protected boolean sendBlocking(byte command, byte[] payload, byte expected, long timeout) {
+		Runnable sender = (payload == null) ? (() -> sendNoPayLoad(command)) : (() -> sendPayLoad(command, payload));
+
 		if (timeout <= 0) {
-			sendNoPayLoad(command);
+			sender.run();
 			return true;
 		} else {
 			lastReceived = 0;
 			long endTime = System.currentTimeMillis() + timeout;
 			do {
-				sendNoPayLoad(command);
+				sender.run();
 				pause(20);
 			} while (endTime >= System.currentTimeMillis() && lastReceived != expected);
 			return lastReceived == expected;
@@ -205,57 +232,61 @@ public class RPLidarLowLevelDriver {
 	 */
 	protected void sendPayLoad(byte command, byte[] payLoad) {
 		if (verbose) {
-			System.out.printf("Sending command 0x%02x\n", command & 0xFF);
+			System.out.printf("Sending command 0x%02x\n", command);
 		}
 
 		dataOut[0] = SYNC_BYTE0;
 		dataOut[1] = command;
 
-		// add payLoad and calculate checksum
-		dataOut[2] = (byte) payLoad.length;
-		int checksum = 0 ^ dataOut[0] ^ dataOut[1] ^ (dataOut[2] & 0xFF);
+		// calculate checksum
+		int checksum = dataOut[0] ^ dataOut[1];
 
 		for (int i = 0; i < payLoad.length; i++) {
-			dataOut[3 + i] = payLoad[i];
-			checksum ^= dataOut[3 + i];
+			dataOut[2 + i] = payLoad[i];
+			checksum ^= dataOut[2 + i];
 		}
 
-		// add checksum - now total length is 3 + payLoad.length + 1
-		dataOut[3 + payLoad.length] = (byte) checksum;
+		// add checksum - now total length is 2 + payLoad.length + 1
+		dataOut[2 + payLoad.length] = (byte) checksum;
+
+		// System.out.print("dataOut = [");
+		// for (byte b : dataOut) {
+		// System.out.printf("0x%02x ", b);
+		// }
+		// System.out.println("] (We will send " + (2 + payLoad.length + 1) + ")");
 
 		try {
-			out.write(dataOut, 0, 3 + payLoad.length + 1);
+			out.write(dataOut, 0, 2 + payLoad.length + 1);
 			out.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	/**
-	 * Sends a command with data payload - int
-	 */
-	protected void sendPayLoad(byte command, int payLoadInt) {
-		byte[] payLoad = new byte[2];
+	protected byte[] toLittleEndian(int payLoadInt) {
+		byte[] payload = new byte[2];
 
 		// load payload little Endian
-		payLoad[0] = (byte) payLoadInt;
-		payLoad[1] = (byte) (payLoadInt >> 8);
+		payload[0] = (byte) (payLoadInt & 0xFF);
+		payload[1] = (byte) ((payLoadInt >> 8) & 0xFF);
 
-		sendPayLoad(command, payLoad);
+		return payload;
 	}
 
 	/**
 	 * Sends a start motor command
 	 */
 	public void sendStartMotor(int speed) {
-		sendPayLoad(START_MOTOR, speed);
+		byte[] number = toLittleEndian(speed);
+
+		sendPayLoad(START_MOTOR, new byte[] { (byte) 0x02, number[0], number[1] });
 	}
 
 	/**
 	 * Sends a stop motor command
 	 */
 	public void sendStopMotor() {
-		sendPayLoad(START_MOTOR, 0);
+		sendStartMotor(0);
 	}
 
 	/**
@@ -264,14 +295,6 @@ public class RPLidarLowLevelDriver {
 	protected int parseData(byte[] data, int length) {
 
 		int offset = 0;
-
-		// if (verbose) {
-		// 	StringBuilder sb = new StringBuilder("parseData length = ").append(length);
-		// 	for (int i = 0; i < length; i++) {
-		// 		sb.append("%02x ").append(data[i] & 0xFF);
-		// 	}
-		// 	System.out.printf(sb.toString());
-		// }
 
 		// search for the first good packet it can find
 		while (true) {
@@ -397,6 +420,7 @@ public class RPLidarLowLevelDriver {
 		if ((b1 & 0x01) != 1)
 			return false;
 
+		var measurement = new RPLidarMeasurement();
 		measurement.timestamp = System.currentTimeMillis();
 		measurement.start = start0;
 		measurement.quality = (b0 & 0xFF) >> 2;

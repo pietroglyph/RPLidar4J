@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "CodeLens (Launch) - DirectMeasurementDemo",
+            "request": "launch",
+            "mainClass": "examples.DirectMeasurementDemo",
+            "projectName": "RPLidar4J"
+        },
+        {
+            "type": "java",
             "name": "CodeLens (Launch) - PointcloudDemo",
             "request": "launch",
             "mainClass": "examples.PointcloudDemo",
