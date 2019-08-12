@@ -1,4 +1,4 @@
-package ev3dev.sensors.slamtec.service;
+package  ev3dev.sensors.slamtec;
 
 import purejavacomm.CommPort;
 import purejavacomm.CommPortIdentifier;
@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * @author Peter Abeles, Declan Freeman-Gleason
  */
-public class RpLidarLowLevelDriver {
+public class RPLidarLowLevelDriver {
 
 	// out going packet types
 	public static final byte SYNC_BYTE0 = (byte) 0xA5;
@@ -47,10 +47,10 @@ public class RpLidarLowLevelDriver {
 	private ReadSerialThread readThread;
 
 	// Storage for incoming packets
-	RpLidarHeath health = new RpLidarHeath();
-	RpLidarDeviceInfo deviceInfo = new RpLidarDeviceInfo();
-	RpLidarMeasurement measurement = new RpLidarMeasurement();
-	RpLidarListener listener;
+	RPLidarHealth health = new RPLidarHealth();
+	RPLidarDeviceInfo deviceInfo = new RPLidarDeviceInfo();
+	RPLidarMeasurement measurement = new RPLidarMeasurement();
+	RPLidarListener listener;
 
 	// if it is in scanning mode. When in scanning mode it just parses measurement
 	// packets
@@ -66,7 +66,7 @@ public class RpLidarLowLevelDriver {
 	 * @param listener Listener for in comming packets
 	 * @throws Exception
 	 */
-	public RpLidarLowLevelDriver(final String portName, final RpLidarListener listener) throws Exception {
+	public RPLidarLowLevelDriver(final String portName, final RPLidarListener listener) throws Exception {
 
 		System.out.println("Opening port " + portName);
 
@@ -267,13 +267,13 @@ public class RpLidarLowLevelDriver {
 
 		int offset = 0;
 
-		if (verbose) {
-			StringBuilder sb = new StringBuilder("parseData length = ").append(length);
-			for (int i = 0; i < length; i++) {
-				sb.append("%02x ").append(data[i] & 0xFF);
-			}
-			System.out.println(sb.toString());
-		}
+		// if (verbose) {
+		// 	StringBuilder sb = new StringBuilder("parseData length = ").append(length);
+		// 	for (int i = 0; i < length; i++) {
+		// 		sb.append("%02x ").append(data[i] & 0xFF);
+		// 	}
+		// 	System.out.printf(sb.toString());
+		// }
 
 		// search for the first good packet it can find
 		while (true) {
@@ -399,11 +399,14 @@ public class RpLidarLowLevelDriver {
 		if ((b1 & 0x01) != 1)
 			return false;
 
-		measurement.timeMilli = System.currentTimeMillis();
+		measurement.timestamp = System.currentTimeMillis();
 		measurement.start = start0;
 		measurement.quality = (b0 & 0xFF) >> 2;
-		measurement.angle = ((b1 & 0xFF) | ((data[offset + 2] & 0xFF) << 8)) >> 1;
-		measurement.distance = ((data[offset + 3] & 0xFF) | ((data[offset + 4] & 0xFF) << 8));
+		int angle = ((b1 & 0xFF) | ((data[offset + 2] & 0xFF) << 8)) >> 1;
+		int distance = ((data[offset + 3] & 0xFF) | ((data[offset + 4] & 0xFF) << 8));
+
+		measurement.angle = angle / 64f;
+		measurement.distance = distance / 40f;
 
 		listener.handleMeasurement(measurement);
 		return true;
@@ -433,11 +436,8 @@ public class RpLidarLowLevelDriver {
 
 		@Override
 		public void run() {
-
 			while (run.get()) {
-
 				try {
-
 					if (in.available() > 0) {
 						int totalRead = in.read(data, size, data.length - size);
 
@@ -453,13 +453,6 @@ public class RpLidarLowLevelDriver {
 					}
 
 					Thread.sleep(5);
-				} catch (IOException e) {
-					System.out.println(e.getLocalizedMessage());
-					e.printStackTrace();
-				} catch (InterruptedException e) {
-					System.out.println(e.getLocalizedMessage());
-					e.printStackTrace();
-					// TODO Improve this Exception scenario
 				} catch (Exception e) {
 					System.out.println(e.getLocalizedMessage());
 					e.printStackTrace();

@@ -166,7 +166,7 @@ java -Djava.library.path=/usr/lib/jni/ -jar /home/robot/RPLidar4J-all-0.4.0.jar
 ev3dev#3|17:05:12.652 [main] INFO examples.Demo4 - Testing RPLidar on a EV3Dev with Java
 ev3dev#3|17:05:13.075 [main] INFO ev3dev.sensors.slamtec.RPLidarA1Driver - Starting a RPLidarA1 instance
 ev3dev#3|17:05:13.086 [main] INFO ev3dev.sensors.slamtec.RPLidarA1Driver - Connecting with: /dev/ttyUSB0
-ev3dev#3|17:05:13.392 [main] INFO ev3dev.sensors.slamtec.service.RpLidarLowLevelDriver - Opening port /dev/ttyUSB0
+ev3dev#3|17:05:13.392 [main] INFO  ev3dev.sensors.slamtec.RpLidarLowLevelDriver - Opening port /dev/ttyUSB0
 ev3dev#3|Stable Library
 ev3dev#3|=========================================
 ev3dev#3|Native lib Version = RXTX-2.2pre2
@@ -256,7 +256,7 @@ java -Djava.library.path=/usr/lib/jni/ -jar /home/robot/RPLidar4J-all-0.4.0.jar
 ev3dev#5|17:09:45.943 [main] INFO examples.Demo4 - Testing RPLidar on a EV3Dev with Java
 ev3dev#5|17:09:46.377 [main] INFO ev3dev.sensors.slamtec.RPLidarA1Driver - Starting a RPLidarA1 instance
 ev3dev#5|17:09:46.388 [main] INFO ev3dev.sensors.slamtec.RPLidarA1Driver - Connecting with: /dev/ttyUSB1
-ev3dev#5|17:09:46.678 [main] INFO ev3dev.sensors.slamtec.service.RpLidarLowLevelDriver - Opening port /dev/ttyUSB1
+ev3dev#5|17:09:46.678 [main] INFO  ev3dev.sensors.slamtec.RpLidarLowLevelDriver - Opening port /dev/ttyUSB1
 ev3dev#5|Stable Library
 ev3dev#5|=========================================
 ev3dev#5|Native lib Version = RXTX-2.2pre2

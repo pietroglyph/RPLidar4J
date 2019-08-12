@@ -1,4 +1,4 @@
-package ev3dev.sensors.slamtec.service;
+package  ev3dev.sensors.slamtec;
 
 /**
  * Contains information about the device
@@ -6,7 +6,7 @@ package ev3dev.sensors.slamtec.service;
  * @author Peter Abeles
  * @author Juan Antonio Breña Moral
  */
-public class RpLidarDeviceInfo {
+public class RPLidarDeviceInfo {
 
 	public int model;
 	public int firmware_minor;

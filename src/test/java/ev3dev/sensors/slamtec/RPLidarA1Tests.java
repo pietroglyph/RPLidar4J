@@ -1,37 +1,52 @@
 package ev3dev.sensors.slamtec;
 
-import ev3dev.sensors.slamtec.model.Scan;
+import static org.junit.Assert.assertTrue;
 
-import org.junit.Ignore;
+import java.util.List;
 import org.junit.Test;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class RPLidarA1Tests {
 
-	@Test
-	@Ignore("Stream usage")
-	public void getDistanceStreamTest() throws Exception {
+	private final String kUSBPort = "/dev/ttyUSB0";
 
-		final String USBPort = "/dev/ttyUSB0";
-		final RPLidarA1 lidar = new RPLidarA1(USBPort);
-		lidar.init();
-		lidar.scan().getDistances().stream().forEach(System.out::println);
-		lidar.close();
+	private Boolean gotMeasurementUpdate = false;
+	private Boolean gotPointcloud = false;
+
+	@Test
+	public void getDistanceStreamTest() throws Exception {
+		final RPLidarA1 lidar = new RPLidarA1(kUSBPort, (RPLidarMeasurement m) -> {
+			if (m != null && !m.isInvalid()) {
+				synchronized (gotMeasurementUpdate) {
+					gotMeasurementUpdate.notify();
+					gotMeasurementUpdate = true;
+				}
+			}
+		});
+		lidar.start();
+
+		synchronized (gotMeasurementUpdate) {
+			gotMeasurementUpdate.wait(1000);
+			assertTrue(gotMeasurementUpdate);
+		}
+
+		lidar.stop();
 	}
 
 	@Test
 	public void return360DistanceTest() throws Exception {
+		final RPLidarA1 lidar = new RPLidarA1(kUSBPort, (List<RPLidarMeasurement> pointcloud) -> {
+			assertTrue("Pointcloud is empty", pointcloud.size() > 0);
+			synchronized (gotPointcloud) {
+				gotPointcloud.notify();
+			}
+		});
+		lidar.start();
 
-		final String USBPort = "/dev/ttyUSB0";
-		final RPLidarA1 lidar = new RPLidarA1(USBPort);
-		lidar.init();
-		final Scan scan = lidar.scan();
-		lidar.close();
+		synchronized (gotPointcloud) {
+			gotPointcloud.wait(1000);
+		}
+		// assertTrue(gotPointcloud);
 
-		assertThat(scan, is(notNullValue()));
-		assertThat(scan.getDistances().size(), is(RPLidarProvider.SCAN_DEGREES));
+		lidar.stop();
 	}
 }

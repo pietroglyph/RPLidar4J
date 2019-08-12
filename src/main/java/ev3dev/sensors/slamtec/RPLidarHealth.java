@@ -1,4 +1,4 @@
-package ev3dev.sensors.slamtec.service;
+package  ev3dev.sensors.slamtec;
 
 /**
  * Packet which describes the sensor's health
@@ -6,7 +6,7 @@ package ev3dev.sensors.slamtec.service;
  * @author Peter Abeles
  * @author Juan Antonio Breña Moral
  */
-public class RpLidarHeath {
+public class RPLidarHealth {
 
 	public int status;
 	public int error_code;
